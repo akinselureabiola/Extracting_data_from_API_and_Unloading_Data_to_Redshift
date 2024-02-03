@@ -14,7 +14,7 @@ from airflow.operators.bash_operator import BashOperator
 from boto3.session import Session
 from sqlalchemy import create_engine
 
-DAG_ID = 'api_file_extract_&_upload'
+DAG_ID = 'api_file-extract-and-upload'
 
 
 default_args = {
@@ -42,10 +42,10 @@ def extract_file():
     df = pd.DataFrame({'col':parsed})
 
     # Convert DataFrame to Csv file format
-    df_csv = df.to_csv('../test/uni.csv', index=False)
+    df_csv = df.to_csv('./logs/uni.csv', index=False)
 
     #Convert CSV file to Paquet file format
-    df_paquet = df.to_parquet('../test/uni.parquet', index=False)
+    df_paquet = df.to_parquet('./logs/uni.parquet', index=False)
 
 
 def upload_file_to_s3():
@@ -55,19 +55,19 @@ def upload_file_to_s3():
 
     s3_client = boto3.client('s3', aws_access_key_id=Variable.get('ACCESS_KEY'), aws_secret_access_key=Variable.get('SECRET_KEY'))
     transfer = S3Transfer(s3_client)
-    transfer.upload_file('../test/uni.parquet', 'staging-olist', 'uni.parquet', extra_args={'ServerSideEncryption': "AES256"})
+    transfer.upload_file('./logs/uni.parquet', 'staging-olist', 'uni.parquet', extra_args={'ServerSideEncryption': "AES256"})
 
 
 def transfer_file():
     session = boto3.session.Session(aws_access_key_id=Variable.get('ACCESS_KEY'), 
-                      aws_secret_access_key='Variable.get('SECRET_KEY')
+                      aws_secret_access_key=Variable.get('SECRET_KEY')
                      )
     # read file using awswrangler
     df = wr.s3.read_parquet(path='s3://staging-olist/uni.parquet', boto3_session=session)
     
     # transfer file from s3 to postgres rds db
     conn = create_engine("postgresql+psycopg2://staging_db:DnrbWdUcaZxyIc7v@postgres.cnelwn14hnqh.eu-central-1.rds.amazonaws.com:5432/main")
-    new_df = df.to_sql("uni-data", con=conn, schema="olist")
+    new_df = df.to_sql("old-uni-file", con=conn, schema="olist")
     return new_df
     
 
